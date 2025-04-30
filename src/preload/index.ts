@@ -1,8 +1,16 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  resizeToPill: () => ipcRenderer.invoke('resize-to-pill'),
+  onWindowStateChange: (callback: (state: 'pill' | 'normal') => void) => {
+    ipcRenderer.on('window-state-changed', (_, state) => callback(state))
+    return () => {
+      ipcRenderer.removeAllListeners('window-state-changed')
+    }
+  }
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
