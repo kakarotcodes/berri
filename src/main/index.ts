@@ -100,16 +100,16 @@ app.whenReady().then(() => {
           const startTime = Date.now()
           const duration = 350
           const interval = 8
-
+          
           const animate = () => {
             const elapsed = Date.now() - startTime
             const progress = Math.min(elapsed / duration, 1)
-
+            
             const pinchEase = (t: number) => {
               return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
             }
             const easedProgress = pinchEase(progress)
-
+            
             // Calculate current dimensions with optimized scaling
             const currentWidth = Math.round(
               startBounds.width + (originalBounds!.width - startBounds.width) * easedProgress
@@ -117,30 +117,30 @@ app.whenReady().then(() => {
             const currentHeight = Math.round(
               startBounds.height + (originalBounds!.height - startBounds.height) * easedProgress
             )
-
+            
             // Calculate position with center scaling
             const centerX = startBounds.x + startBounds.width / 2
             const centerY = startBounds.y + startBounds.height / 2
             const targetCenterX = originalBounds!.x + originalBounds!.width / 2
             const targetCenterY = originalBounds!.y + originalBounds!.height / 2
-
+            
             const currentX = Math.round(
               centerX - currentWidth / 2 + (targetCenterX - centerX) * easedProgress
             )
             const currentY = Math.round(
               centerY - currentHeight / 2 + (targetCenterY - centerY) * easedProgress
             )
-
+            
             win.setBounds({
               x: currentX,
               y: currentY,
               width: currentWidth,
               height: currentHeight
             })
-
+            
             // Fade back to full opacity
             win.setOpacity(0.7 + 0.3 * easedProgress)
-
+            
             if (progress < 1) {
               setTimeout(animate, interval)
             } else {
@@ -151,7 +151,7 @@ app.whenReady().then(() => {
               win.webContents.send('window-state-changed', 'normal')
             }
           }
-
+          
           animate()
         }
       } else {
@@ -159,80 +159,64 @@ app.whenReady().then(() => {
         if (!originalBounds) {
           originalBounds = win.getBounds()
         }
-
+        
         const startBounds = win.getBounds()
-        const targetWidth = 150 // Wider for pill shape
-        const targetHeight = 40 // Shorter height for pill shape
-
+        const targetWidth = 100 // Standard pill width
+        const targetHeight = 40 // Standard pill height
+        
         // Get screen dimensions
         const { width: screenWidth } = screen.getPrimaryDisplay().workArea
-
-        // Calculate final position (40% out of screen)
+        
+        // Calculate final position (40% hidden)
         const hiddenPercentage = 0.4 // 40% hidden
-        const finalX = screenWidth - targetWidth * (1 - hiddenPercentage)
-        const finalY = 20 // Slight padding from top
-
+        const finalX = screenWidth - (targetWidth * (1 - hiddenPercentage))
+        const finalY = 20 // Standard top padding
+        
         const startTime = Date.now()
-        const duration = 350 // Optimized duration
-        const interval = 8 // Higher frame rate
-
-        // Pre-calculate center points
-        const centerX = startBounds.x + startBounds.width / 2
-        const centerY = startBounds.y + startBounds.height / 2
-
-        // Set initial transparency
-        win.setOpacity(1)
-
+        const duration = 350
+        const interval = 8
+        
         const animate = () => {
           const elapsed = Date.now() - startTime
           const progress = Math.min(elapsed / duration, 1)
-
-          // Optimized easing function for smoother motion
+          
           const pinchEase = (t: number) => {
-            // Custom cubic bezier-like curve
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
           }
           const easedProgress = pinchEase(progress)
-
-          // Subtle scale effect with optimized timing
-          const scale = 1 - 0.15 * Math.sin(progress * Math.PI * 1.5)
-
-          // Calculate dimensions with optimized scaling
+          
           const currentWidth = Math.round(
-            (startBounds.width + (targetWidth - startBounds.width) * easedProgress) * scale
+            startBounds.width + (targetWidth - startBounds.width) * easedProgress
           )
           const currentHeight = Math.round(
-            (startBounds.height + (targetHeight - startBounds.height) * easedProgress) * scale
+            startBounds.height + (targetHeight - startBounds.height) * easedProgress
           )
-
-          // Calculate position with optimized center scaling
+          
           const currentX = Math.round(
-            centerX - currentWidth / 2 + (finalX - centerX + targetWidth / 2) * easedProgress
+            startBounds.x + (finalX - startBounds.x) * easedProgress
           )
           const currentY = Math.round(
-            centerY - currentHeight / 2 + (finalY - centerY + targetHeight / 2) * easedProgress
+            startBounds.y + (finalY - startBounds.y) * easedProgress
           )
-
-          // Set bounds with minimal calculations
+          
           win.setBounds({
             x: currentX,
             y: currentY,
             width: currentWidth,
             height: currentHeight
           })
-
+          
           // Fade to semi-transparent
           win.setOpacity(1 - 0.3 * easedProgress) // 70% opacity when in pill form
-
+          
           if (progress < 1) {
             setTimeout(animate, interval)
           } else {
             isPill = true
-            // Notify renderer of state change
             win.webContents.send('window-state-changed', 'pill')
           }
         }
-
+        
         animate()
       }
     }
@@ -247,49 +231,53 @@ app.whenReady().then(() => {
       const interval = 8
 
       // Get screen dimensions
-      const { height: screenHeight } = screen.getPrimaryDisplay().workArea
-
+      const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea
+      
       // Calculate available space above and below
       const spaceBelow = screenHeight - (startBounds.y + startBounds.height)
       const spaceAbove = startBounds.y
-
+      
       // Determine expansion direction
       const shouldExpandUp = spaceBelow < 240 && spaceAbove >= 240
+
+      // Calculate new X position to ensure full visibility
+      const targetWidth = 240 // Standard expanded width
+      const targetHeight = 240 // Standard expanded height
+      const newX = Math.min(
+        Math.max(0, startBounds.x - (targetWidth - startBounds.width) / 2),
+        screenWidth - targetWidth
+      )
 
       const animate = () => {
         const elapsed = Date.now() - startTime
         const progress = Math.min(elapsed / duration, 1)
-
+        
         const pinchEase = (t: number) => {
           return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
         }
-
+        
         const easedProgress = pinchEase(progress)
-
-        const newWidth = Math.round(startBounds.width + (240 - startBounds.width) * easedProgress)
-        const newHeight = Math.round(
-          startBounds.height + (240 - startBounds.height) * easedProgress
-        )
-
-        // Calculate new position based on expansion direction
-        const centerX = startBounds.x + startBounds.width / 2
-        const newX = Math.round(centerX - newWidth / 2)
-        const newY = shouldExpandUp
-          ? Math.round(startBounds.y + startBounds.height - newHeight) // Expand up
-          : Math.round(startBounds.y) // Expand down
-
+        
+        const newWidth = Math.round(startBounds.width + (targetWidth - startBounds.width) * easedProgress)
+        const newHeight = Math.round(startBounds.height + (targetHeight - startBounds.height) * easedProgress)
+        
+        const currentX = Math.round(startBounds.x + (newX - startBounds.x) * easedProgress)
+        const newY = shouldExpandUp 
+          ? Math.round(startBounds.y + startBounds.height - newHeight)
+          : Math.round(startBounds.y)
+        
         win.setBounds({
-          x: newX,
+          x: currentX,
           y: newY,
           width: newWidth,
           height: newHeight
         })
-
+        
         if (progress < 1) {
           setTimeout(animate, interval)
         }
       }
-
+      
       animate()
     }
   })
@@ -302,8 +290,16 @@ app.whenReady().then(() => {
       const duration = 350
       const interval = 8
 
-      const targetWidth = 100
-      const targetHeight = 40
+      const targetWidth = 100 // Standard pill width
+      const targetHeight = 40 // Standard pill height
+
+      // Get screen dimensions
+      const { width: screenWidth } = screen.getPrimaryDisplay().workArea
+      
+      // Calculate final position (40% hidden)
+      const hiddenPercentage = 0.4 // 40% hidden
+      const finalX = screenWidth - (targetWidth * (1 - hiddenPercentage))
+      const finalY = 20 // Standard top padding
 
       const animate = () => {
         const elapsed = Date.now() - startTime
@@ -315,21 +311,15 @@ app.whenReady().then(() => {
         
         const easedProgress = pinchEase(progress)
         
-        const newWidth = Math.round(
-          startBounds.width + (targetWidth - startBounds.width) * easedProgress
-        )
-        const newHeight = Math.round(
-          startBounds.height + (targetHeight - startBounds.height) * easedProgress
-        )
+        const newWidth = Math.round(startBounds.width + (targetWidth - startBounds.width) * easedProgress)
+        const newHeight = Math.round(startBounds.height + (targetHeight - startBounds.height) * easedProgress)
         
-        // Calculate new position maintaining the top edge
-        const centerX = startBounds.x + startBounds.width / 2
-        const newX = Math.round(centerX - newWidth / 2)
-        const newY = startBounds.y // Keep the same top position
+        const currentX = Math.round(startBounds.x + (finalX - startBounds.x) * easedProgress)
+        const currentY = Math.round(startBounds.y + (finalY - startBounds.y) * easedProgress)
         
         win.setBounds({
-          x: newX,
-          y: newY,
+          x: currentX,
+          y: currentY,
           width: newWidth,
           height: newHeight
         })
