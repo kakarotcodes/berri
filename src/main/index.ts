@@ -42,7 +42,7 @@ function createWindow(): void {
   enable(mainWindow.webContents)
 
   mainWindow.setVisibleOnAllWorkspaces(true, {
-    visibleOnFullScreen: true, // keep showing when another app goes FS
+    visibleOnFullScreen: true,
     skipTransformProcessType: false
   })
 
@@ -80,16 +80,16 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
-  
+
   // Store original bounds
   let originalBounds: Electron.Rectangle | null = null
   let isPill = false
-  
+
   // Handle window state changes
   ipcMain.handle('get-window-state', () => {
     return isPill ? 'pill' : 'normal'
   })
-  
+
   ipcMain.handle('resize-to-pill', () => {
     const win = BrowserWindow.getFocusedWindow()
     if (win) {
@@ -100,41 +100,47 @@ app.whenReady().then(() => {
           const startTime = Date.now()
           const duration = 350
           const interval = 8
-          
+
           const animate = () => {
             const elapsed = Date.now() - startTime
             const progress = Math.min(elapsed / duration, 1)
-            
+
             const pinchEase = (t: number) => {
-              return t < 0.5
-                ? 4 * t * t * t
-                : 1 - Math.pow(-2 * t + 2, 3) / 2
+              return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
             }
             const easedProgress = pinchEase(progress)
-            
+
             // Calculate current dimensions with optimized scaling
-            const currentWidth = Math.round(startBounds.width + (originalBounds!.width - startBounds.width) * easedProgress)
-            const currentHeight = Math.round(startBounds.height + (originalBounds!.height - startBounds.height) * easedProgress)
-            
+            const currentWidth = Math.round(
+              startBounds.width + (originalBounds!.width - startBounds.width) * easedProgress
+            )
+            const currentHeight = Math.round(
+              startBounds.height + (originalBounds!.height - startBounds.height) * easedProgress
+            )
+
             // Calculate position with center scaling
             const centerX = startBounds.x + startBounds.width / 2
             const centerY = startBounds.y + startBounds.height / 2
             const targetCenterX = originalBounds!.x + originalBounds!.width / 2
             const targetCenterY = originalBounds!.y + originalBounds!.height / 2
-            
-            const currentX = Math.round(centerX - (currentWidth / 2) + (targetCenterX - centerX) * easedProgress)
-            const currentY = Math.round(centerY - (currentHeight / 2) + (targetCenterY - centerY) * easedProgress)
-            
+
+            const currentX = Math.round(
+              centerX - currentWidth / 2 + (targetCenterX - centerX) * easedProgress
+            )
+            const currentY = Math.round(
+              centerY - currentHeight / 2 + (targetCenterY - centerY) * easedProgress
+            )
+
             win.setBounds({
               x: currentX,
               y: currentY,
               width: currentWidth,
               height: currentHeight
             })
-            
+
             // Fade back to full opacity
-            win.setOpacity(0.7 + (0.3 * easedProgress))
-            
+            win.setOpacity(0.7 + 0.3 * easedProgress)
+
             if (progress < 1) {
               setTimeout(animate, interval)
             } else {
@@ -145,7 +151,7 @@ app.whenReady().then(() => {
               win.webContents.send('window-state-changed', 'normal')
             }
           }
-          
+
           animate()
         }
       } else {
@@ -153,54 +159,60 @@ app.whenReady().then(() => {
         if (!originalBounds) {
           originalBounds = win.getBounds()
         }
-        
+
         const startBounds = win.getBounds()
         const targetWidth = 150 // Wider for pill shape
         const targetHeight = 40 // Shorter height for pill shape
-        
+
         // Get screen dimensions
         const { width: screenWidth } = screen.getPrimaryDisplay().workArea
-        
+
         // Calculate final position (40% out of screen)
         const hiddenPercentage = 0.4 // 40% hidden
-        const finalX = screenWidth - (targetWidth * (1 - hiddenPercentage))
+        const finalX = screenWidth - targetWidth * (1 - hiddenPercentage)
         const finalY = 20 // Slight padding from top
-        
+
         const startTime = Date.now()
         const duration = 350 // Optimized duration
         const interval = 8 // Higher frame rate
-        
+
         // Pre-calculate center points
         const centerX = startBounds.x + startBounds.width / 2
         const centerY = startBounds.y + startBounds.height / 2
-        
+
         // Set initial transparency
         win.setOpacity(1)
-        
+
         const animate = () => {
           const elapsed = Date.now() - startTime
           const progress = Math.min(elapsed / duration, 1)
-          
+
           // Optimized easing function for smoother motion
           const pinchEase = (t: number) => {
             // Custom cubic bezier-like curve
-            return t < 0.5
-              ? 4 * t * t * t
-              : 1 - Math.pow(-2 * t + 2, 3) / 2
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
           }
           const easedProgress = pinchEase(progress)
-          
+
           // Subtle scale effect with optimized timing
-          const scale = 1 - (0.15 * Math.sin(progress * Math.PI * 1.5))
-          
+          const scale = 1 - 0.15 * Math.sin(progress * Math.PI * 1.5)
+
           // Calculate dimensions with optimized scaling
-          const currentWidth = Math.round((startBounds.width + (targetWidth - startBounds.width) * easedProgress) * scale)
-          const currentHeight = Math.round((startBounds.height + (targetHeight - startBounds.height) * easedProgress) * scale)
-          
+          const currentWidth = Math.round(
+            (startBounds.width + (targetWidth - startBounds.width) * easedProgress) * scale
+          )
+          const currentHeight = Math.round(
+            (startBounds.height + (targetHeight - startBounds.height) * easedProgress) * scale
+          )
+
           // Calculate position with optimized center scaling
-          const currentX = Math.round(centerX - (currentWidth / 2) + (finalX - centerX + targetWidth / 2) * easedProgress)
-          const currentY = Math.round(centerY - (currentHeight / 2) + (finalY - centerY + targetHeight / 2) * easedProgress)
-          
+          const currentX = Math.round(
+            centerX - currentWidth / 2 + (finalX - centerX + targetWidth / 2) * easedProgress
+          )
+          const currentY = Math.round(
+            centerY - currentHeight / 2 + (finalY - centerY + targetHeight / 2) * easedProgress
+          )
+
           // Set bounds with minimal calculations
           win.setBounds({
             x: currentX,
@@ -210,8 +222,8 @@ app.whenReady().then(() => {
           })
 
           // Fade to semi-transparent
-          win.setOpacity(1 - (0.3 * easedProgress)) // 70% opacity when in pill form
-          
+          win.setOpacity(1 - 0.3 * easedProgress) // 70% opacity when in pill form
+
           if (progress < 1) {
             setTimeout(animate, interval)
           } else {
@@ -220,9 +232,117 @@ app.whenReady().then(() => {
             win.webContents.send('window-state-changed', 'pill')
           }
         }
-        
+
         animate()
       }
+    }
+  })
+
+  ipcMain.handle('expand-pill', () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win && isPill) {
+      const startBounds = win.getBounds()
+      const startTime = Date.now()
+      const duration = 350
+      const interval = 8
+
+      // Get screen dimensions
+      const { height: screenHeight } = screen.getPrimaryDisplay().workArea
+
+      // Calculate available space above and below
+      const spaceBelow = screenHeight - (startBounds.y + startBounds.height)
+      const spaceAbove = startBounds.y
+
+      // Determine expansion direction
+      const shouldExpandUp = spaceBelow < 240 && spaceAbove >= 240
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+
+        const pinchEase = (t: number) => {
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        }
+
+        const easedProgress = pinchEase(progress)
+
+        const newWidth = Math.round(startBounds.width + (240 - startBounds.width) * easedProgress)
+        const newHeight = Math.round(
+          startBounds.height + (240 - startBounds.height) * easedProgress
+        )
+
+        // Calculate new position based on expansion direction
+        const centerX = startBounds.x + startBounds.width / 2
+        const newX = Math.round(centerX - newWidth / 2)
+        const newY = shouldExpandUp
+          ? Math.round(startBounds.y + startBounds.height - newHeight) // Expand up
+          : Math.round(startBounds.y) // Expand down
+
+        win.setBounds({
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight
+        })
+
+        if (progress < 1) {
+          setTimeout(animate, interval)
+        }
+      }
+
+      animate()
+    }
+  })
+
+  ipcMain.handle('collapse-pill', () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win && isPill) {
+      const startBounds = win.getBounds()
+      const startTime = Date.now()
+      const duration = 350
+      const interval = 8
+
+      const targetWidth = 100
+      const targetHeight = 40
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        
+        const pinchEase = (t: number) => {
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        }
+        
+        const easedProgress = pinchEase(progress)
+        
+        const newWidth = Math.round(
+          startBounds.width + (targetWidth - startBounds.width) * easedProgress
+        )
+        const newHeight = Math.round(
+          startBounds.height + (targetHeight - startBounds.height) * easedProgress
+        )
+        
+        // Calculate new position maintaining the top edge
+        const centerX = startBounds.x + startBounds.width / 2
+        const newX = Math.round(centerX - newWidth / 2)
+        const newY = startBounds.y // Keep the same top position
+        
+        win.setBounds({
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight
+        })
+        
+        if (progress < 1) {
+          setTimeout(animate, interval)
+        } else {
+          isPill = true
+          win.webContents.send('window-state-changed', 'pill')
+        }
+      }
+      
+      animate()
     }
   })
 

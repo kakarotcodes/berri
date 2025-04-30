@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function App(): React.JSX.Element {
   const [isPill, setIsPill] = useState(false)
+  const expandTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     // Listen for window state changes from main process
@@ -52,6 +54,28 @@ function App(): React.JSX.Element {
         {isPill && (
           <div 
             onClick={() => window.api.resizeToPill()}
+            onMouseEnter={() => {
+              // Clear any pending collapse
+              if (collapseTimeoutRef.current) {
+                clearTimeout(collapseTimeoutRef.current)
+                collapseTimeoutRef.current = null
+              }
+              // Set expand timeout
+              expandTimeoutRef.current = setTimeout(() => {
+                window.api.expandPill()
+              }, 500)
+            }}
+            onMouseLeave={() => {
+              // Clear any pending expand
+              if (expandTimeoutRef.current) {
+                clearTimeout(expandTimeoutRef.current)
+                expandTimeoutRef.current = null
+              }
+              // Set collapse timeout
+              collapseTimeoutRef.current = setTimeout(() => {
+                window.api.collapsePill()
+              }, 800)
+            }}
             style={{
               position: 'absolute',
               top: 0,
