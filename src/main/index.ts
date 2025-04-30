@@ -1,13 +1,26 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea
+
+  const windowWidth = 512
+  const windowHeight = 288
+  const margin = 30
+
+  const x = screenWidth - windowWidth - margin
+  const y = screenHeight - windowHeight
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    alwaysOnTop: true,
+    width: windowWidth,
+    height: windowHeight,
+    x,
+    y,
+    frame: false,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -15,6 +28,11 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
+  })
+
+  mainWindow.setVisibleOnAllWorkspaces(true, {
+    visibleOnFullScreen: true, // keep showing when another app goes FS
+    skipTransformProcessType: false
   })
 
   mainWindow.on('ready-to-show', () => {
