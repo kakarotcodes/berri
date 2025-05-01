@@ -1,34 +1,61 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 function App(): React.JSX.Element {
   const [isPill, setIsPill] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
+
+  // Memoize the window state change handler
+  const handleWindowStateChange = useCallback((state: 'pill' | 'normal') => {
+    setIsPill(state === 'pill')
+  }, [])
 
   useEffect(() => {
     // Listen for window state changes from main process
-    window.api.onWindowStateChange((state) => {
-      setIsPill(state === 'pill')
-    })
+    window.api.onWindowStateChange(handleWindowStateChange)
+    
+    // Cleanup
+    return () => {
+      // Note: In a real app, you'd need to implement a way to remove the listener
+      // This is just a placeholder for the cleanup
+    }
+  }, [handleWindowStateChange])
 
-    // Listen for hover state changes from main process
-    window.api.onHoverStateChange((hovered) => {
-      setIsHovered(hovered)
-    })
-  }, [])
-
-  const handlePillClick = (e: React.MouseEvent) => {
+  // Memoize the pill click handler
+  const handlePillClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     if (isPill) {
       window.api.restoreWindow()
     }
-  }
+  }, [isPill])
 
-  // Common styles
-  const commonStyles = {
+  // Memoize common styles
+  const commonStyles = useMemo(() => ({
     backgroundColor: '#1a1a1a',
     color: 'white',
-  }
+  }), [])
+
+  // Memoize the button styles
+  const buttonStyles = useMemo(() => ({
+    padding: '8px 16px',
+    backgroundColor: commonStyles.backgroundColor,
+    color: commonStyles.color,
+    border: '1px solid #333',
+    borderRadius: '8px',
+    cursor: 'pointer'
+  }), [commonStyles])
+
+  // Memoize the pill container styles
+  const pillContainerStyles = useMemo(() => ({
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: commonStyles.backgroundColor,
+    borderRadius: '20px',
+    cursor: 'pointer' as const,
+    pointerEvents: 'auto' as const
+  }), [commonStyles])
 
   return (
     <>
@@ -67,14 +94,7 @@ function App(): React.JSX.Element {
         {!isPill && (
           <button
             onClick={() => window.api.resizeToPill()}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: commonStyles.backgroundColor,
-              color: commonStyles.color,
-              border: '1px solid #333',
-              borderRadius: '8px',
-              cursor: 'pointer'
-            }}
+            style={buttonStyles}
           >
             Resize to pill
           </button>
@@ -83,18 +103,7 @@ function App(): React.JSX.Element {
           <div
             onClick={handlePillClick}
             onMouseDown={handlePillClick}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: commonStyles.backgroundColor,
-              borderRadius: '20px',
-              cursor: 'pointer',
-              pointerEvents: 'auto',
-              transition: 'background-color 0.3s ease'
-            }}
+            style={pillContainerStyles}
           />
         )}
       </main>
