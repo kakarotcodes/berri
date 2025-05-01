@@ -10,6 +10,9 @@ const api = {
   restoreWindow: () => ipcRenderer.invoke('restore-window'),
   onWindowStateChange: (callback: (state: 'pill' | 'normal') => void) => {
     ipcRenderer.on('window-state-changed', (_, state) => callback(state))
+  },
+  onHoverStateChange: (callback: (hovered: boolean) => void) => {
+    ipcRenderer.on('hover-state-changed', (_, hovered) => callback(hovered))
   }
 }
 

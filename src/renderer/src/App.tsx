@@ -1,16 +1,28 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 function App(): React.JSX.Element {
   const [isPill, setIsPill] = useState(false)
-  const expandTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isHovered, setIsHovered] = useState(false)
 
   useEffect(() => {
     // Listen for window state changes from main process
     window.api.onWindowStateChange((state) => {
       setIsPill(state === 'pill')
     })
+
+    // Listen for hover state changes from main process
+    window.api.onHoverStateChange((hovered) => {
+      setIsHovered(hovered)
+    })
   }, [])
+
+  const handlePillClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isPill) {
+      window.api.restoreWindow()
+    }
+  }
 
   return (
     <>
@@ -53,49 +65,19 @@ function App(): React.JSX.Element {
         )}
         {isPill && (
           <div 
-            onClick={() => {
-              // Clear any pending timeouts
-              if (expandTimeoutRef.current) {
-                clearTimeout(expandTimeoutRef.current)
-                expandTimeoutRef.current = null
-              }
-              if (collapseTimeoutRef.current) {
-                clearTimeout(collapseTimeoutRef.current)
-                collapseTimeoutRef.current = null
-              }
-              // Restore to original state
-              window.api.restoreWindow()
-            }}
-            onMouseEnter={() => {
-              // Clear any pending collapse
-              if (collapseTimeoutRef.current) {
-                clearTimeout(collapseTimeoutRef.current)
-                collapseTimeoutRef.current = null
-              }
-              // Set expand timeout
-              expandTimeoutRef.current = setTimeout(() => {
-                window.api.expandPill()
-              }, 500)
-            }}
-            onMouseLeave={() => {
-              // Clear any pending expand
-              if (expandTimeoutRef.current) {
-                clearTimeout(expandTimeoutRef.current)
-                expandTimeoutRef.current = null
-              }
-              // Set collapse timeout
-              collapseTimeoutRef.current = setTimeout(() => {
-                window.api.collapsePill()
-              }, 800)
-            }}
+            onClick={handlePillClick}
+            onMouseDown={handlePillClick}
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               width: '100%',
               height: '100%',
+              backgroundColor: '#333',
+              borderRadius: '20px',
               cursor: 'pointer',
-              pointerEvents: 'auto'
+              pointerEvents: 'auto',
+              transition: 'background-color 0.3s ease'
             }}
           />
         )}
