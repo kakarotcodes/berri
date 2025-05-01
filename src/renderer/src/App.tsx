@@ -24,14 +24,27 @@ function App(): React.JSX.Element {
     }
   }
 
+  // Common styles
+  const commonStyles = {
+    backgroundColor: '#1a1a1a',
+    color: 'white',
+  }
+
   return (
     <>
       <style>
         {`
-          body {
+          :root {
+            background-color: ${commonStyles.backgroundColor};
+          }
+          
+          html, body, #root {
             margin: 0;
             padding: 0;
-            background-color: #1a1a1a;
+            background-color: ${commonStyles.backgroundColor};
+            color: ${commonStyles.color};
+            height: 100%;
+            width: 100%;
           }
         `}
       </style>
@@ -39,14 +52,15 @@ function App(): React.JSX.Element {
         style={{
           width: '100vw',
           height: '100vh',
-          backgroundColor: '#1a1a1a',
-          color: 'white',
+          ...commonStyles,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           margin: 0,
-          padding: 0
+          padding: 0,
+          borderRadius: '20px',
+          overflow: 'hidden'
         }}
       >
         <p>Berri v1</p>
@@ -55,10 +69,10 @@ function App(): React.JSX.Element {
             onClick={() => window.api.resizeToPill()}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#333',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
+              backgroundColor: commonStyles.backgroundColor,
+              color: commonStyles.color,
+              border: '1px solid #333',
+              borderRadius: '8px',
               cursor: 'pointer'
             }}
           >
@@ -75,7 +89,7 @@ function App(): React.JSX.Element {
               left: 0,
               width: '100%',
               height: '100%',
-              backgroundColor: '#333',
+              backgroundColor: commonStyles.backgroundColor,
               borderRadius: '20px',
               cursor: 'pointer',
               pointerEvents: 'auto',
