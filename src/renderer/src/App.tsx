@@ -57,6 +57,21 @@ function App(): React.JSX.Element {
     pointerEvents: 'auto' as const
   }), [commonStyles])
 
+  // Memoize the header styles
+  const headerStyles = useMemo(() => ({
+    width: '100%',
+    height: '40px',
+    backgroundColor: '#ff0000',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: '16px',
+    WebkitAppRegion: 'drag' as const,
+    cursor: 'default'
+  }), [])
+
   return (
     <>
       <style>
@@ -73,6 +88,10 @@ function App(): React.JSX.Element {
             height: 100%;
             width: 100%;
           }
+
+          button {
+            -webkit-app-region: no-drag;
+          }
         `}
       </style>
       <main
@@ -83,29 +102,33 @@ function App(): React.JSX.Element {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           margin: 0,
           padding: 0,
           borderRadius: '20px',
           overflow: 'hidden'
         }}
       >
-        <p>Berri v1</p>
-        {!isPill && (
-          <button
-            onClick={() => window.api.resizeToPill()}
-            style={buttonStyles}
-          >
-            Resize to pill
-          </button>
-        )}
-        {isPill && (
-          <div
-            onClick={handlePillClick}
-            onMouseDown={handlePillClick}
-            style={pillContainerStyles}
-          />
-        )}
+        <div style={headerStyles}>
+          Berri v1
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          {!isPill && (
+            <button
+              onClick={() => window.api.resizeToPill()}
+              style={buttonStyles}
+            >
+              Resize to pill
+            </button>
+          )}
+          {isPill && (
+            <div
+              onClick={handlePillClick}
+              onMouseDown={handlePillClick}
+              style={pillContainerStyles}
+            />
+          )}
+        </div>
       </main>
     </>
   )
