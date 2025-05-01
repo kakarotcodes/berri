@@ -22,7 +22,7 @@ const ANIMATION = {
     WIDTH: 100,
     HEIGHT: 40,
     HIDDEN_PERCENT: 0.4,
-    TOP_MARGIN: 150
+    TOP_MARGIN: 135
   },
   HOVER: {
     WIDTH: 240,
