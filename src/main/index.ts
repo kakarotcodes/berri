@@ -9,6 +9,37 @@ initialize()
 
 // Track window state
 let isPill = false
+let mouseTrackingInterval: NodeJS.Timeout | null = null
+
+function trackMousePosition(window: BrowserWindow) {
+  if (mouseTrackingInterval) {
+    clearInterval(mouseTrackingInterval)
+  }
+
+  mouseTrackingInterval = setInterval(() => {
+    if (!window) return
+
+    const cursorPos = screen.getCursorScreenPoint()
+    const bounds = window.getBounds()
+    const display = screen.getDisplayNearestPoint(cursorPos)
+    const scaleFactor = display.scaleFactor
+
+    // Check if cursor is within the window bounds
+    if (
+      cursorPos.x >= bounds.x &&
+      cursorPos.x <= bounds.x + bounds.width &&
+      cursorPos.y >= bounds.y &&
+      cursorPos.y <= bounds.y + bounds.height
+    ) {
+      // Convert to CSS coordinates (adjust for DPI scaling)
+      const relX = (cursorPos.x - bounds.x) / scaleFactor
+      const relY = (cursorPos.y - bounds.y) / scaleFactor
+
+      // Send coordinates to renderer
+      window.webContents.send('simulate-mousemove', { x: relX, y: relY })
+    }
+  }, 50) // Poll every 50ms
+}
 
 function createWindow(): void {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea
@@ -52,6 +83,9 @@ function createWindow(): void {
   // Set up mouse event handling
   mainWindow.setIgnoreMouseEvents(false, { forward: true })
 
+  // Start tracking mouse position
+  trackMousePosition(mainWindow)
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -68,6 +102,19 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // Handle window focus
+  mainWindow.on('focus', () => {
+    if (isPill) {
+      mainWindow.webContents.send('window-state-changed', 'pill')
+    }
+  })
+
+  mainWindow.on('blur', () => {
+    if (isPill) {
+      mainWindow.webContents.send('window-state-changed', 'pill')
+    }
+  })
 }
 
 // This method will be called when Electron has finished
@@ -83,9 +130,6 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
 
   // Store original bounds
   let originalBounds: Electron.Rectangle | null = null
@@ -231,6 +275,8 @@ app.whenReady().then(() => {
             setTimeout(animate, interval)
           } else {
             isPill = true
+            // Focus the window when entering pill mode
+            win.focus()
             win.webContents.send('window-state-changed', 'pill')
           }
         }
@@ -240,135 +286,14 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('expand-pill', () => {
-    const win = BrowserWindow.getFocusedWindow()
-    if (win && isPill) {
-      const startBounds = win.getBounds()
-      const startTime = Date.now()
-      const duration = 350
-      const interval = 8
-
-      // Get the current display the window is on
-      const displays = screen.getAllDisplays()
-      const currentDisplay = displays.find(display => {
-        const { x, y, width, height } = display.bounds
-        const windowCenterX = startBounds.x + startBounds.width / 2
-        const windowCenterY = startBounds.y + startBounds.height / 2
-        return (
-          windowCenterX >= x &&
-          windowCenterX <= x + width &&
-          windowCenterY >= y &&
-          windowCenterY <= y + height
-        )
-      }) || displays[0] // Fallback to primary display if not found
-      
-      const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
-      
-      // Calculate new position at top-right of current screen
-      const targetWidth = 240 // Standard expanded width
-      const targetHeight = 240 // Standard expanded height
-      const newX = displayX + displayWidth - targetWidth
-      const newY = displayY + 150 // 150px from top of the screen
-
-      const animate = () => {
-        const elapsed = Date.now() - startTime
-        const progress = Math.min(elapsed / duration, 1)
-        
-        const pinchEase = (t: number) => {
-          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-        }
-        
-        const easedProgress = pinchEase(progress)
-        
-        const newWidth = Math.round(startBounds.width + (targetWidth - startBounds.width) * easedProgress)
-        const newHeight = Math.round(startBounds.height + (targetHeight - startBounds.height) * easedProgress)
-        
-        const currentX = Math.round(startBounds.x + (newX - startBounds.x) * easedProgress)
-        const currentY = Math.round(startBounds.y + (newY - startBounds.y) * easedProgress)
-        
-        win.setBounds({
-          x: currentX,
-          y: currentY,
-          width: newWidth,
-          height: newHeight
-        })
-        
-        if (progress < 1) {
-          setTimeout(animate, interval)
-        }
-      }
-      
-      animate()
-    }
-  })
-
-  ipcMain.handle('collapse-pill', () => {
-    const win = BrowserWindow.getFocusedWindow()
-    if (win && isPill) {
-      const startBounds = win.getBounds()
-      const startTime = Date.now()
-      const duration = 350
-      const interval = 8
-
-      // Get the current display the window is on
-      const displays = screen.getAllDisplays()
-      const currentDisplay = displays.find(display => {
-        const { x, y, width, height } = display.bounds
-        const windowCenterX = startBounds.x + startBounds.width / 2
-        const windowCenterY = startBounds.y + startBounds.height / 2
-        return (
-          windowCenterX >= x &&
-          windowCenterX <= x + width &&
-          windowCenterY >= y &&
-          windowCenterY <= y + height
-        )
-      }) || displays[0] // Fallback to primary display if not found
-
-      const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
-
-      const targetWidth = 100 // Standard pill width
-      const targetHeight = 40 // Standard pill height
-      
-      // Calculate final position at top-right of current screen
-      const hiddenPercentage = 0.4 // 40% hidden
-      const finalX = displayX + displayWidth - (targetWidth * (1 - hiddenPercentage))
-      const finalY = displayY + 150 // 150px from top of the screen
-
-      const animate = () => {
-        const elapsed = Date.now() - startTime
-        const progress = Math.min(elapsed / duration, 1)
-        
-        const pinchEase = (t: number) => {
-          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-        }
-        
-        const easedProgress = pinchEase(progress)
-        
-        const newWidth = Math.round(startBounds.width + (targetWidth - startBounds.width) * easedProgress)
-        const newHeight = Math.round(startBounds.height + (targetHeight - startBounds.height) * easedProgress)
-        
-        const currentX = Math.round(startBounds.x + (finalX - startBounds.x) * easedProgress)
-        const currentY = Math.round(startBounds.y + (finalY - startBounds.y) * easedProgress)
-        
-        win.setBounds({
-          x: currentX,
-          y: currentY,
-          width: newWidth,
-          height: newHeight
-        })
-        
-        if (progress < 1) {
-          setTimeout(animate, interval)
-        }
-      }
-      
-      animate()
-    }
-  })
-
+  // Handle window restore
   ipcMain.handle('restore-window', () => {
     const win = BrowserWindow.getFocusedWindow()
     if (win && isPill && originalBounds) {
+      // Focus the window before restoring
+      win.focus()
+      win.setIgnoreMouseEvents(false, { forward: true })
+      
       const startBounds = win.getBounds()
       const startTime = Date.now()
       const duration = 350
