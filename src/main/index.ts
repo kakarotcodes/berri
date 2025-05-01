@@ -37,6 +37,7 @@ function trackMousePosition(window: BrowserWindow) {
         clearInterval(mouseTrackingInterval)
         mouseTrackingInterval = null
       }
+      isHovered = false
       return
     }
 
@@ -52,11 +53,11 @@ function trackMousePosition(window: BrowserWindow) {
     )
 
     // Handle hover state changes
-    if (isInside && !isHovered) {
+    if (isInside && !isHovered && !isAnimating) {
       isHovered = true
       window.webContents.send('hover-state-changed', true)
       // Expand the pill
-      if (isPill && !isAnimating) {
+      if (isPill) {
         const startBounds = window.getBounds()
         const startTime = Date.now()
         const duration = 350
@@ -87,8 +88,36 @@ function trackMousePosition(window: BrowserWindow) {
         isAnimating = true
         
         const animate = () => {
-          if (!window || !isPill) {
+          // Recheck if mouse is still inside before each frame
+          const currentPos = screen.getCursorScreenPoint()
+          const currentBounds = window.getBounds()
+          const stillInside = (
+            currentPos.x >= currentBounds.x &&
+            currentPos.x <= currentBounds.x + currentBounds.width &&
+            currentPos.y >= currentBounds.y &&
+            currentPos.y <= currentBounds.y + currentBounds.height
+          )
+
+          if (!window || !isPill || !stillInside) {
             isAnimating = false
+            isHovered = false
+            window.webContents.send('hover-state-changed', false)
+            // If mouse left during expansion, collapse back
+            if (isPill) {
+              const collapseBounds = window.getBounds()
+              const targetWidth = 100 // Standard pill width
+              const targetHeight = 40 // Standard pill height
+              const hiddenPercentage = 0.4
+              const finalX = displayX + displayWidth - (targetWidth * (1 - hiddenPercentage))
+              const finalY = displayY + 150
+
+              window.setBounds({
+                width: targetWidth,
+                height: targetHeight,
+                x: finalX,
+                y: finalY
+              })
+            }
             return
           }
           

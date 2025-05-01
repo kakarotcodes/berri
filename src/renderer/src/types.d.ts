@@ -1,5 +1,6 @@
 interface Window {
   api: {
+    onHoverStateChange(arg0: (hovered: any) => void): unknown
     resizeToPill: () => void
     expandPill: () => void
     collapsePill: () => void

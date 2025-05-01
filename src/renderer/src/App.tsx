@@ -35,21 +35,23 @@ function App(): React.JSX.Element {
           }
         `}
       </style>
-      <main style={{ 
-        width: '100vw', 
-        height: '100vh', 
-        backgroundColor: '#1a1a1a',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        margin: 0,
-        padding: 0
-      }}>
+      <main
+        style={{
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#1a1a1a',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: 0,
+          padding: 0
+        }}
+      >
         <p>Berri v1</p>
         {!isPill && (
-          <button 
+          <button
             onClick={() => window.api.resizeToPill()}
             style={{
               padding: '8px 16px',
@@ -64,7 +66,7 @@ function App(): React.JSX.Element {
           </button>
         )}
         {isPill && (
-          <div 
+          <div
             onClick={handlePillClick}
             onMouseDown={handlePillClick}
             style={{
