@@ -49,6 +49,9 @@ function createWindow(): void {
     skipTransformProcessType: false
   })
 
+  // Set up mouse event handling
+  mainWindow.setIgnoreMouseEvents(false, { forward: true })
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -356,6 +359,69 @@ app.whenReady().then(() => {
         
         if (progress < 1) {
           setTimeout(animate, interval)
+        }
+      }
+      
+      animate()
+    }
+  })
+
+  ipcMain.handle('restore-window', () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win && isPill && originalBounds) {
+      const startBounds = win.getBounds()
+      const startTime = Date.now()
+      const duration = 350
+      const interval = 8
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        
+        const pinchEase = (t: number) => {
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        }
+        const easedProgress = pinchEase(progress)
+        
+        // Calculate current dimensions with optimized scaling
+        const currentWidth = Math.round(
+          startBounds.width + (originalBounds!.width - startBounds.width) * easedProgress
+        )
+        const currentHeight = Math.round(
+          startBounds.height + (originalBounds!.height - startBounds.height) * easedProgress
+        )
+        
+        // Calculate position with center scaling
+        const centerX = startBounds.x + startBounds.width / 2
+        const centerY = startBounds.y + startBounds.height / 2
+        const targetCenterX = originalBounds!.x + originalBounds!.width / 2
+        const targetCenterY = originalBounds!.y + originalBounds!.height / 2
+        
+        const currentX = Math.round(
+          centerX - currentWidth / 2 + (targetCenterX - centerX) * easedProgress
+        )
+        const currentY = Math.round(
+          centerY - currentHeight / 2 + (targetCenterY - centerY) * easedProgress
+        )
+        
+        win.setBounds({
+          x: currentX,
+          y: currentY,
+          width: currentWidth,
+          height: currentHeight
+        })
+        
+        // Fade back to full opacity
+        win.setOpacity(0.7 + 0.3 * easedProgress)
+        
+        if (progress < 1) {
+          setTimeout(animate, interval)
+        } else {
+          // Reset original bounds after animation
+          originalBounds = null
+          isPill = false
+          // Notify renderer of state change
+          win.webContents.send('window-state-changed', 'normal')
         }
       }
       

@@ -7,6 +7,7 @@ const api = {
   expandPill: () => ipcRenderer.invoke('expand-pill'),
   collapsePill: () => ipcRenderer.invoke('collapse-pill'),
   movePill: (y: number) => ipcRenderer.invoke('move-pill', y),
+  restoreWindow: () => ipcRenderer.invoke('restore-window'),
   onWindowStateChange: (callback: (state: 'pill' | 'normal') => void) => {
     ipcRenderer.on('window-state-changed', (_, state) => callback(state))
   }

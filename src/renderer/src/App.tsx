@@ -53,7 +53,19 @@ function App(): React.JSX.Element {
         )}
         {isPill && (
           <div 
-            onClick={() => window.api.resizeToPill()}
+            onClick={() => {
+              // Clear any pending timeouts
+              if (expandTimeoutRef.current) {
+                clearTimeout(expandTimeoutRef.current)
+                expandTimeoutRef.current = null
+              }
+              if (collapseTimeoutRef.current) {
+                clearTimeout(collapseTimeoutRef.current)
+                collapseTimeoutRef.current = null
+              }
+              // Restore to original state
+              window.api.restoreWindow()
+            }}
             onMouseEnter={() => {
               // Clear any pending collapse
               if (collapseTimeoutRef.current) {
@@ -82,7 +94,8 @@ function App(): React.JSX.Element {
               left: 0,
               width: '100%',
               height: '100%',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              pointerEvents: 'auto'
             }}
           />
         )}
