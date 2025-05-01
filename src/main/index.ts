@@ -7,6 +7,9 @@ import { initialize, enable } from '@electron/remote/main'
 // Initialize remote module
 initialize()
 
+// Track window state
+let isPill = false
+
 function createWindow(): void {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea
 
@@ -83,7 +86,6 @@ app.whenReady().then(() => {
 
   // Store original bounds
   let originalBounds: Electron.Rectangle | null = null
-  let isPill = false
 
   // Handle window state changes
   ipcMain.handle('get-window-state', () => {
@@ -164,13 +166,26 @@ app.whenReady().then(() => {
         const targetWidth = 100 // Standard pill width
         const targetHeight = 40 // Standard pill height
         
-        // Get screen dimensions
-        const { width: screenWidth } = screen.getPrimaryDisplay().workArea
+        // Get the current display the window is on
+        const displays = screen.getAllDisplays()
+        const currentDisplay = displays.find(display => {
+          const { x, y, width, height } = display.bounds
+          const windowCenterX = startBounds.x + startBounds.width / 2
+          const windowCenterY = startBounds.y + startBounds.height / 2
+          return (
+            windowCenterX >= x &&
+            windowCenterX <= x + width &&
+            windowCenterY >= y &&
+            windowCenterY <= y + height
+          )
+        }) || displays[0] // Fallback to primary display if not found
         
-        // Calculate final position (40% hidden)
+        const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
+        
+        // Calculate final position at top-right of current screen
         const hiddenPercentage = 0.4 // 40% hidden
-        const finalX = screenWidth - (targetWidth * (1 - hiddenPercentage))
-        const finalY = 20 // Standard top padding
+        const finalX = displayX + displayWidth - (targetWidth * (1 - hiddenPercentage))
+        const finalY = displayY + 150 // 150px from top of the screen
         
         const startTime = Date.now()
         const duration = 350
@@ -230,23 +245,27 @@ app.whenReady().then(() => {
       const duration = 350
       const interval = 8
 
-      // Get screen dimensions
-      const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea
+      // Get the current display the window is on
+      const displays = screen.getAllDisplays()
+      const currentDisplay = displays.find(display => {
+        const { x, y, width, height } = display.bounds
+        const windowCenterX = startBounds.x + startBounds.width / 2
+        const windowCenterY = startBounds.y + startBounds.height / 2
+        return (
+          windowCenterX >= x &&
+          windowCenterX <= x + width &&
+          windowCenterY >= y &&
+          windowCenterY <= y + height
+        )
+      }) || displays[0] // Fallback to primary display if not found
       
-      // Calculate available space above and below
-      const spaceBelow = screenHeight - (startBounds.y + startBounds.height)
-      const spaceAbove = startBounds.y
+      const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
       
-      // Determine expansion direction
-      const shouldExpandUp = spaceBelow < 240 && spaceAbove >= 240
-
-      // Calculate new X position to ensure full visibility
+      // Calculate new position at top-right of current screen
       const targetWidth = 240 // Standard expanded width
       const targetHeight = 240 // Standard expanded height
-      const newX = Math.min(
-        Math.max(0, startBounds.x - (targetWidth - startBounds.width) / 2),
-        screenWidth - targetWidth
-      )
+      const newX = displayX + displayWidth - targetWidth
+      const newY = displayY + 150 // 150px from top of the screen
 
       const animate = () => {
         const elapsed = Date.now() - startTime
@@ -262,13 +281,11 @@ app.whenReady().then(() => {
         const newHeight = Math.round(startBounds.height + (targetHeight - startBounds.height) * easedProgress)
         
         const currentX = Math.round(startBounds.x + (newX - startBounds.x) * easedProgress)
-        const newY = shouldExpandUp 
-          ? Math.round(startBounds.y + startBounds.height - newHeight)
-          : Math.round(startBounds.y)
+        const currentY = Math.round(startBounds.y + (newY - startBounds.y) * easedProgress)
         
         win.setBounds({
           x: currentX,
-          y: newY,
+          y: currentY,
           width: newWidth,
           height: newHeight
         })
@@ -290,16 +307,29 @@ app.whenReady().then(() => {
       const duration = 350
       const interval = 8
 
+      // Get the current display the window is on
+      const displays = screen.getAllDisplays()
+      const currentDisplay = displays.find(display => {
+        const { x, y, width, height } = display.bounds
+        const windowCenterX = startBounds.x + startBounds.width / 2
+        const windowCenterY = startBounds.y + startBounds.height / 2
+        return (
+          windowCenterX >= x &&
+          windowCenterX <= x + width &&
+          windowCenterY >= y &&
+          windowCenterY <= y + height
+        )
+      }) || displays[0] // Fallback to primary display if not found
+
+      const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
+
       const targetWidth = 100 // Standard pill width
       const targetHeight = 40 // Standard pill height
-
-      // Get screen dimensions
-      const { width: screenWidth } = screen.getPrimaryDisplay().workArea
       
-      // Calculate final position (40% hidden)
+      // Calculate final position at top-right of current screen
       const hiddenPercentage = 0.4 // 40% hidden
-      const finalX = screenWidth - (targetWidth * (1 - hiddenPercentage))
-      const finalY = 20 // Standard top padding
+      const finalX = displayX + displayWidth - (targetWidth * (1 - hiddenPercentage))
+      const finalY = displayY + 150 // 150px from top of the screen
 
       const animate = () => {
         const elapsed = Date.now() - startTime
@@ -326,9 +356,6 @@ app.whenReady().then(() => {
         
         if (progress < 1) {
           setTimeout(animate, interval)
-        } else {
-          isPill = true
-          win.webContents.send('window-state-changed', 'pill')
         }
       }
       
