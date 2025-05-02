@@ -179,3 +179,25 @@ code {
     display: none;
   }
 } */
+
+.window.pill {
+  transform: scaleX(0.195) scaleY(0.078);
+  clip-path: inset(0 80% 92% 0 round 20px);
+  transition: transform 0.3s ease, clip-path 0.3s ease;
+}
+
+.window.hover {
+  transform: scale(0.55);
+  transition: transform 0.3s ease;
+}
+
+.window.full {
+  transform: none;
+  transition: transform 0.3s ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .window.pill, .window.hover, .window.full {
+    transition: none;
+  }
+}

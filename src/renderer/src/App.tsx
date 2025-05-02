@@ -1,23 +1,47 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 
 function App(): React.JSX.Element {
+  const [view, setView] = useState('full') // 'pill', 'hover', 'full'
   const [isPill, setIsPill] = useState(false)
 
   // Memoize the window state change handler
   const handleWindowStateChange = useCallback((state: 'pill' | 'normal') => {
     setIsPill(state === 'pill')
+    // Update view state based on window state
+    if (state === 'normal') {
+      setView('full')
+    } else {
+      setView('pill')
+    }
   }, [])
 
   useEffect(() => {
     // Listen for window state changes from main process
     window.api.onWindowStateChange(handleWindowStateChange)
     
+    // Listen for hover state changes
+    window.api.onHoverStateChange((hovered) => {
+      if (isPill) {
+        setView(hovered ? 'hover' : 'pill')
+      }
+    })
+
+    // Handle visibility changes (system sleep/wake)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Only report visibility change to main process
+        // Let the main process decide what to do
+        window.api.send?.('window-visibility-change', true)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
     // Cleanup
     return () => {
-      // Note: In a real app, you'd need to implement a way to remove the listener
-      // This is just a placeholder for the cleanup
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [handleWindowStateChange])
+  }, [handleWindowStateChange, isPill])
 
   // Memoize the pill click handler
   const handlePillClick = useCallback((e: React.MouseEvent) => {
@@ -73,7 +97,7 @@ function App(): React.JSX.Element {
   }), [])
 
   return (
-    <>
+    <div className={`window ${view}`}>
       <style>
         {`
           :root {
@@ -130,8 +154,16 @@ function App(): React.JSX.Element {
           )}
         </div>
       </main>
-    </>
+    </div>
   )
+}
+
+function debounce(func: Function, wait: number) {
+  let timeout: NodeJS.Timeout;
+  return function (this: any, ...args: any[]) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
 }
 
 export default App
