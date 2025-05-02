@@ -275,11 +275,45 @@ function trackMousePosition(window: BrowserWindow) {
       if (isPill) {
         const startBounds = window.getBounds()
         const currentDisplay = getCurrentDisplay(startBounds)
-        const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
+        const { x: displayX, width: displayWidth } = currentDisplay.bounds
+        
+        // Check if there's enough space below for the hover view
+        const bottomEdge = currentDisplay.workArea.y + currentDisplay.workArea.height
+        const savedY = getSavedPillPositionY(currentDisplay)
+        const spaceBelow = bottomEdge - savedY - ANIMATION.HOVER.HEIGHT
+        
+        // Get current pill height for calculating overlap
+        const pillHeight = startBounds.height
+        
+        // Determine position based on available space
+        let targetY
+        if (spaceBelow < 0) {
+          // Not enough space below, position above with optimal overlap
+          // We position it so there's a 20px overlap between the pill and hover view
+          const overlapAmount = 20 // Pixels of overlap for visual continuity
+          
+          targetY = Math.max(
+            currentDisplay.workArea.y, // Don't go above the top of the screen
+            savedY - ANIMATION.HOVER.HEIGHT + overlapAmount // Create overlap with pill
+          )
+          
+          // Additional logging to debug positioning
+          console.log('Opening hover above pill:', {
+            pillY: savedY,
+            hoverY: targetY,
+            overlap: overlapAmount,
+            pillHeight: pillHeight,
+            hoverHeight: ANIMATION.HOVER.HEIGHT
+          })
+        } else {
+          // Enough space below, use normal position
+          targetY = savedY
+          console.log('Opening hover below pill at Y:', targetY)
+        }
         
         const targetBounds = {
           x: displayX + displayWidth - ANIMATION.HOVER.WIDTH,
-          y: getSavedPillPositionY(currentDisplay),
+          y: targetY,
           width: ANIMATION.HOVER.WIDTH,
           height: ANIMATION.HOVER.HEIGHT
         }
@@ -747,7 +781,7 @@ ipcMain.on('save-pill-position', () => {
   
   // Ensure position respects minimum margin from bottom
   const bottomEdge = currentDisplay.workArea.y + currentDisplay.workArea.height;
-  const minMargin = 40; // Minimum margin from bottom edge in pixels
+  const minMargin = -100; // Minimum margin from bottom edge in pixels
   
   // Enforce minimum distance from bottom
   if (savedY + currentBounds.height > bottomEdge - minMargin) {
@@ -786,7 +820,7 @@ function getSavedPillPositionY(currentDisplay: Electron.Display): number {
   
   // Ensure position respects minimum margin from bottom
   const bottomEdge = currentDisplay.workArea.y + currentDisplay.workArea.height;
-  const minMargin = 40; // Minimum margin from bottom edge in pixels
+  const minMargin = -100; // Minimum margin from bottom edge in pixels
   
   // Enforce minimum distance from bottom
   if (yPosition + windowHeight > bottomEdge - minMargin) {

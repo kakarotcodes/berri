@@ -56,7 +56,7 @@ const HoverView: React.FC<{ onPillClick: (e: React.MouseEvent) => void; styles: 
     <div
       style={{
         width: '100%',
-        height: '100%',
+        height: '200px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -79,9 +79,11 @@ const HoverView: React.FC<{ onPillClick: (e: React.MouseEvent) => void; styles: 
       >
         Berri v1
       </div>
-      <div
+      <button
         onClick={onPillClick}
         style={{
+          background: 'blue',
+          color: 'white',
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
@@ -91,8 +93,8 @@ const HoverView: React.FC<{ onPillClick: (e: React.MouseEvent) => void; styles: 
           width: '100%'
         }}
       >
-        <p style={{ fontSize: '16px', textAlign: 'center', margin: 0 }}>Click to expand</p>
-      </div>
+        Click to expand
+      </button>
 
       {/* Green drag handle */}
       <div
@@ -127,7 +129,7 @@ const HoverView: React.FC<{ onPillClick: (e: React.MouseEvent) => void; styles: 
           function onMouseUp() {
             // Save the final position for the pill
             window.electron.ipcRenderer.send('save-pill-position')
-            
+
             // Clean up event listeners
             document.removeEventListener('mousemove', onMouseMove)
             document.removeEventListener('mouseup', onMouseUp)
