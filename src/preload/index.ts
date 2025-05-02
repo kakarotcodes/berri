@@ -13,6 +13,9 @@ const api = {
   },
   onHoverStateChange: (callback: (hovered: boolean) => void) => {
     ipcRenderer.on('hover-state-changed', (_, hovered) => callback(hovered))
+  },
+  send: (channel: string, ...args: any[]) => {
+    ipcRenderer.send(channel, ...args)
   }
 }
 
