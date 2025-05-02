@@ -275,11 +275,45 @@ function trackMousePosition(window: BrowserWindow) {
       if (isPill) {
         const startBounds = window.getBounds()
         const currentDisplay = getCurrentDisplay(startBounds)
-        const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
+        const { x: displayX, width: displayWidth } = currentDisplay.bounds
+        
+        // Check if there's enough space below for the hover view
+        const bottomEdge = currentDisplay.workArea.y + currentDisplay.workArea.height
+        const savedY = getSavedPillPositionY(currentDisplay)
+        const spaceBelow = bottomEdge - savedY - ANIMATION.HOVER.HEIGHT
+        
+        // Get current pill height for calculating overlap
+        const pillHeight = startBounds.height
+        
+        // Determine position based on available space
+        let targetY
+        if (spaceBelow < 0) {
+          // Not enough space below, position above with optimal overlap
+          // We position it so there's a 20px overlap between the pill and hover view
+          const overlapAmount = 20 // Pixels of overlap for visual continuity
+          
+          targetY = Math.max(
+            currentDisplay.workArea.y, // Don't go above the top of the screen
+            savedY - ANIMATION.HOVER.HEIGHT + overlapAmount // Create overlap with pill
+          )
+          
+          // Additional logging to debug positioning
+          console.log('Opening hover above pill:', {
+            pillY: savedY,
+            hoverY: targetY,
+            overlap: overlapAmount,
+            pillHeight: pillHeight,
+            hoverHeight: ANIMATION.HOVER.HEIGHT
+          })
+        } else {
+          // Enough space below, use normal position
+          targetY = savedY
+          console.log('Opening hover below pill at Y:', targetY)
+        }
         
         const targetBounds = {
-          x: displayX + displayWidth - ANIMATION.HOVER.WIDTH,
-          y: displayY + ANIMATION.PILL.TOP_MARGIN,
+          x: displayX + displayWidth - ANIMATION.HOVER.WIDTH - 15, // 15px margin from right edge
+          y: targetY,
           width: ANIMATION.HOVER.WIDTH,
           height: ANIMATION.HOVER.HEIGHT
         }
@@ -303,7 +337,7 @@ function trackMousePosition(window: BrowserWindow) {
 
         const targetBounds = {
           x: displayX + displayWidth - (ANIMATION.PILL.WIDTH * (1 - ANIMATION.PILL.HIDDEN_PERCENT)),
-          y: displayY + ANIMATION.PILL.TOP_MARGIN,
+          y: getSavedPillPositionY(currentDisplay),
           width: ANIMATION.PILL.WIDTH,
           height: ANIMATION.PILL.HEIGHT
         }
@@ -527,7 +561,7 @@ app.whenReady().then(() => {
       const { x: displayX, width: displayWidth, y: displayY } = currentDisplay.bounds
       
       const finalX = displayX + displayWidth - (ANIMATION.PILL.WIDTH * (1 - ANIMATION.PILL.HIDDEN_PERCENT))
-      const finalY = displayY + ANIMATION.PILL.TOP_MARGIN
+      const finalY = getSavedPillPositionY(currentDisplay)
       
       const startTime = Date.now()
       
@@ -691,6 +725,110 @@ ipcMain.on('window-visibility-change', (_, isVisible) => {
     resetToExpandedView()
   }
 })
+
+// Add handler for window dragging from the green handle
+ipcMain.on('window-drag', (_, deltaX, deltaY) => {
+  if (!mainWindow) return;
+  
+  // Get current window position
+  const currentBounds = mainWindow.getBounds();
+  
+  // Get current display
+  const currentDisplay = screen.getDisplayNearestPoint({
+    x: currentBounds.x,
+    y: currentBounds.y
+  });
+  
+  // Calculate right edge X position (fixed)
+  const rightEdgeX = currentDisplay.workArea.x + currentDisplay.workArea.width - currentBounds.width;
+  
+  // Calculate new Y position with deltaY
+  let newY = currentBounds.y + deltaY;
+  
+  // Constrain to keep window at least 40px from bottom of screen
+  const bottomEdge = currentDisplay.workArea.y + currentDisplay.workArea.height;
+  const minMargin = -100; // Minimum margin from bottom edge in pixels
+  
+  // Enforce minimum distance from bottom
+  if (newY + currentBounds.height > bottomEdge - minMargin) {
+    newY = bottomEdge - currentBounds.height - minMargin;
+  }
+  
+  // Set new position - X is fixed to right edge, Y is constrained
+  mainWindow.setBounds({
+    x: rightEdgeX, // Keep X fixed at right edge
+    y: newY, // Y is constrained to maintain bottom margin
+    width: currentBounds.width,
+    height: currentBounds.height
+  });
+});
+
+// Add handler to save current position as pill position
+ipcMain.on('save-pill-position', () => {
+  if (!mainWindow) return;
+  
+  // Get current window position
+  const currentBounds = mainWindow.getBounds();
+  
+  // Get current display
+  const currentDisplay = screen.getDisplayNearestPoint({
+    x: currentBounds.x,
+    y: currentBounds.y
+  });
+  
+  // Calculate Y position with bottom constraint
+  let savedY = currentBounds.y;
+  
+  // Ensure position respects minimum margin from bottom
+  const bottomEdge = currentDisplay.workArea.y + currentDisplay.workArea.height;
+  const minMargin = -100; // Minimum margin from bottom edge in pixels
+  
+  // Enforce minimum distance from bottom
+  if (savedY + currentBounds.height > bottomEdge - minMargin) {
+    savedY = bottomEdge - currentBounds.height - minMargin;
+  }
+  
+  // Store just the Y coordinate for pill mode
+  // We'll always position on the right side horizontally
+  const customPillPosition = {
+    enabled: true,
+    y: savedY
+  };
+  
+  // Log for debugging
+  console.log('Saved pill position Y:', customPillPosition.y);
+  
+  // Store for use when switching view modes
+  global.customPillPosition = customPillPosition;
+});
+
+// Add a function to get the saved pill position Y coordinate
+function getSavedPillPositionY(currentDisplay: Electron.Display): number {
+  // Base position - either custom or default
+  let yPosition;
+  
+  // Check if we have a custom position saved
+  if (global.customPillPosition && global.customPillPosition.enabled) {
+    yPosition = global.customPillPosition.y;
+  } else {
+    // Default position if no custom position is saved
+    yPosition = currentDisplay.bounds.y + ANIMATION.PILL.TOP_MARGIN;
+  }
+  
+  // Get window height based on mode
+  let windowHeight = isPill ? ANIMATION.PILL.HEIGHT : ANIMATION.HOVER.HEIGHT;
+  
+  // Ensure position respects minimum margin from bottom
+  const bottomEdge = currentDisplay.workArea.y + currentDisplay.workArea.height;
+  const minMargin = -100; // Minimum margin from bottom edge in pixels
+  
+  // Enforce minimum distance from bottom
+  if (yPosition + windowHeight > bottomEdge - minMargin) {
+    yPosition = bottomEdge - windowHeight - minMargin;
+  }
+  
+  return yPosition;
+}
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.

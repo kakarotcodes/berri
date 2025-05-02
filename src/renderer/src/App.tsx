@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 
 // ExpandedView Component
-const ExpandedView: React.FC<{ onPillClick: () => void, styles: any }> = ({ onPillClick, styles }) => {
+const ExpandedView: React.FC<{ onPillClick: () => void; styles: any }> = ({
+  onPillClick,
+  styles
+}) => {
   return (
     <main
       style={{
@@ -37,50 +40,114 @@ const ExpandedView: React.FC<{ onPillClick: () => void, styles: any }> = ({ onPi
 }
 
 // PillView Component
-const PillView: React.FC<{ onPillClick: (e: React.MouseEvent) => void, styles: any }> = ({ onPillClick, styles }) => {
-  return (
-    <div
-      onClick={onPillClick}
-      onMouseDown={onPillClick}
-      style={styles.pillContainer}
-    />
-  )
+const PillView: React.FC<{ onPillClick: (e: React.MouseEvent) => void; styles: any }> = ({
+  onPillClick,
+  styles
+}) => {
+  return <div onClick={onPillClick} onMouseDown={onPillClick} style={styles.pillContainer} />
 }
 
 // HoverView Component
-const HoverView: React.FC<{ onPillClick: (e: React.MouseEvent) => void, styles: any }> = ({ onPillClick, styles }) => {
+const HoverView: React.FC<{ onPillClick: (e: React.MouseEvent) => void; styles: any }> = ({
+  onPillClick,
+  styles
+}) => {
   return (
     <div
-      onClick={onPillClick}
-      onMouseDown={onPillClick}
       style={{
-        ...styles.pillContainer,
         width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center'
-      }}
-    >
-      <div style={{
-        ...styles.header,
-        height: '30px',
-        fontSize: '14px',
-        backgroundColor: '#f5455c'
-      }}>
-        Berri v1
-      </div>
-      <div style={{
-        flex: 1,
+        height: '200px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px'
-      }}>
-        <p style={{ fontSize: '12px', textAlign: 'center' }}>
-          Click to expand
-        </p>
+        background: 'yellow',
+        padding: 0,
+        margin: 0,
+        position: 'relative'
+      }}
+    >
+      <div
+        style={{
+          ...styles.header,
+          height: '30px',
+          fontSize: '14px',
+          backgroundColor: '#f5455c',
+          width: '100%',
+          padding: 0,
+          margin: 0
+        }}
+      >
+        Berri v1
+      </div>
+      <button
+        onClick={onPillClick}
+        style={{
+          background: 'blue',
+          color: 'white',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '5px',
+          width: '100%'
+        }}
+      >
+        Click to expand
+      </button>
+
+      {/* Green drag handle */}
+      <div
+        style={{
+          width: '100%',
+          height: '40px',
+          backgroundColor: '#00FF00',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderTop: '2px solid white',
+          cursor: 'grab',
+          userSelect: 'none' as const
+        }}
+        onMouseDown={(e) => {
+          // Prevent click from bubbling to parent
+          e.stopPropagation()
+
+          // Set up initial state
+          const startY = e.clientY
+
+          // Function to handle mousemove during drag
+          function onMouseMove(e: MouseEvent) {
+            // Send move message to main process
+            window.electron.ipcRenderer.send('window-drag', 0, e.clientY - startY)
+          }
+
+          // Function to handle mouseup at end of drag
+          function onMouseUp() {
+            // Save the final position for the pill
+            window.electron.ipcRenderer.send('save-pill-position')
+
+            // Clean up event listeners
+            document.removeEventListener('mousemove', onMouseMove)
+            document.removeEventListener('mouseup', onMouseUp)
+          }
+
+          // Add event listeners
+          document.addEventListener('mousemove', onMouseMove)
+          document.addEventListener('mouseup', onMouseUp)
+        }}
+      >
+        <div
+          style={{
+            width: '80px',
+            height: '6px',
+            backgroundColor: 'white',
+            borderRadius: '3px'
+          }}
+        />
       </div>
     </div>
   )
@@ -203,24 +270,27 @@ function App(): React.JSX.Element {
   )
 
   // Memoize all styles together
-  const styles = useMemo(() => ({
-    common: commonStyles,
-    button: buttonStyles,
-    pillContainer: pillContainerStyles,
-    header: headerStyles
-  }), [commonStyles, buttonStyles, pillContainerStyles, headerStyles])
+  const styles = useMemo(
+    () => ({
+      common: commonStyles,
+      button: buttonStyles,
+      pillContainer: pillContainerStyles,
+      header: headerStyles
+    }),
+    [commonStyles, buttonStyles, pillContainerStyles, headerStyles]
+  )
 
   // Render the appropriate view component based on current state
   const renderView = () => {
     switch (view) {
       case 'full':
-        return <ExpandedView onPillClick={handleResizeToPill} styles={styles} />;
+        return <ExpandedView onPillClick={handleResizeToPill} styles={styles} />
       case 'pill':
-        return <PillView onPillClick={handlePillClick} styles={styles} />;
+        return <PillView onPillClick={handlePillClick} styles={styles} />
       case 'hover':
-        return <HoverView onPillClick={handlePillClick} styles={styles} />;
+        return <HoverView onPillClick={handlePillClick} styles={styles} />
       default:
-        return <ExpandedView onPillClick={handleResizeToPill} styles={styles} />;
+        return <ExpandedView onPillClick={handleResizeToPill} styles={styles} />
     }
   }
 
