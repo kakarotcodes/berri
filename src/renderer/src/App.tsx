@@ -1,5 +1,91 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 
+// ExpandedView Component
+const ExpandedView: React.FC<{ onPillClick: () => void, styles: any }> = ({ onPillClick, styles }) => {
+  return (
+    <main
+      style={{
+        width: '100vw',
+        height: '100vh',
+        ...styles.common,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        margin: 0,
+        padding: 0,
+        borderRadius: '20px',
+        overflow: 'hidden'
+      }}
+    >
+      <div style={styles.header}>Berri v1</div>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <button onClick={onPillClick} style={styles.button}>
+          Resize to pill
+        </button>
+      </div>
+    </main>
+  )
+}
+
+// PillView Component
+const PillView: React.FC<{ onPillClick: (e: React.MouseEvent) => void, styles: any }> = ({ onPillClick, styles }) => {
+  return (
+    <div
+      onClick={onPillClick}
+      onMouseDown={onPillClick}
+      style={styles.pillContainer}
+    />
+  )
+}
+
+// HoverView Component
+const HoverView: React.FC<{ onPillClick: (e: React.MouseEvent) => void, styles: any }> = ({ onPillClick, styles }) => {
+  return (
+    <div
+      onClick={onPillClick}
+      onMouseDown={onPillClick}
+      style={{
+        ...styles.pillContainer,
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}
+    >
+      <div style={{
+        ...styles.header,
+        height: '30px',
+        fontSize: '14px',
+        backgroundColor: '#f5455c'
+      }}>
+        Berri v1
+      </div>
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '10px'
+      }}>
+        <p style={{ fontSize: '12px', textAlign: 'center' }}>
+          Click to expand
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function App(): React.JSX.Element {
   const [view, setView] = useState('full') // 'pill', 'hover', 'full'
   const [isPill, setIsPill] = useState(false)
@@ -18,7 +104,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     // Listen for window state changes from main process
     window.api.onWindowStateChange(handleWindowStateChange)
-    
+
     // Listen for hover state changes
     window.api.onHoverStateChange((hovered) => {
       if (isPill) {
@@ -36,7 +122,7 @@ function App(): React.JSX.Element {
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    
+
     // Cleanup
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -44,57 +130,99 @@ function App(): React.JSX.Element {
   }, [handleWindowStateChange, isPill])
 
   // Memoize the pill click handler
-  const handlePillClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (isPill) {
-      window.api.restoreWindow()
-    }
-  }, [isPill])
+  const handlePillClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (isPill) {
+        window.api.restoreWindow()
+      }
+    },
+    [isPill]
+  )
+
+  // Memoize the resize to pill handler
+  const handleResizeToPill = useCallback(() => {
+    window.api.resizeToPill()
+  }, [])
 
   // Memoize common styles
-  const commonStyles = useMemo(() => ({
-    backgroundColor: '#1a1a1a',
-    color: 'white',
-  }), [])
+  const commonStyles = useMemo(
+    () => ({
+      backgroundColor: '#1a1a1a',
+      color: 'white'
+    }),
+    []
+  )
 
   // Memoize the button styles
-  const buttonStyles = useMemo(() => ({
-    padding: '8px 16px',
-    backgroundColor: commonStyles.backgroundColor,
-    color: commonStyles.color,
-    border: '1px solid #333',
-    borderRadius: '8px',
-    cursor: 'pointer'
-  }), [commonStyles])
+  const buttonStyles = useMemo(
+    () => ({
+      padding: '8px 16px',
+      backgroundColor: commonStyles.backgroundColor,
+      color: commonStyles.color,
+      border: '1px solid #333',
+      borderRadius: '8px',
+      cursor: 'pointer'
+    }),
+    [commonStyles]
+  )
 
   // Memoize the pill container styles
-  const pillContainerStyles = useMemo(() => ({
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: commonStyles.backgroundColor,
-    borderRadius: '20px',
-    cursor: 'pointer' as const,
-    pointerEvents: 'auto' as const
-  }), [commonStyles])
+  const pillContainerStyles = useMemo(
+    () => ({
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: commonStyles.backgroundColor,
+      borderRadius: '20px',
+      cursor: 'pointer' as const,
+      pointerEvents: 'auto' as const
+    }),
+    [commonStyles]
+  )
 
   // Memoize the header styles
-  const headerStyles = useMemo(() => ({
-    width: '100%',
-    height: '40px',
-    backgroundColor: '#ff0000',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: '16px',
-    WebkitAppRegion: 'drag' as const,
-    cursor: 'default'
-  }), [])
+  const headerStyles = useMemo(
+    () => ({
+      width: '100%',
+      height: '40px',
+      backgroundColor: '#ff0000',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontWeight: 'bold',
+      fontSize: '16px',
+      WebkitAppRegion: 'drag' as const,
+      cursor: 'default'
+    }),
+    []
+  )
+
+  // Memoize all styles together
+  const styles = useMemo(() => ({
+    common: commonStyles,
+    button: buttonStyles,
+    pillContainer: pillContainerStyles,
+    header: headerStyles
+  }), [commonStyles, buttonStyles, pillContainerStyles, headerStyles])
+
+  // Render the appropriate view component based on current state
+  const renderView = () => {
+    switch (view) {
+      case 'full':
+        return <ExpandedView onPillClick={handleResizeToPill} styles={styles} />;
+      case 'pill':
+        return <PillView onPillClick={handlePillClick} styles={styles} />;
+      case 'hover':
+        return <HoverView onPillClick={handlePillClick} styles={styles} />;
+      default:
+        return <ExpandedView onPillClick={handleResizeToPill} styles={styles} />;
+    }
+  }
 
   return (
     <div className={`window ${view}`}>
@@ -118,52 +246,9 @@ function App(): React.JSX.Element {
           }
         `}
       </style>
-      <main
-        style={{
-          width: '100vw',
-          height: '100vh',
-          ...commonStyles,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          margin: 0,
-          padding: 0,
-          borderRadius: '20px',
-          overflow: 'hidden'
-        }}
-      >
-        <div style={headerStyles}>
-          Berri v1
-        </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          {!isPill && (
-            <button
-              onClick={() => window.api.resizeToPill()}
-              style={buttonStyles}
-            >
-              Resize to pill
-            </button>
-          )}
-          {isPill && (
-            <div
-              onClick={handlePillClick}
-              onMouseDown={handlePillClick}
-              style={pillContainerStyles}
-            />
-          )}
-        </div>
-      </main>
+      {renderView()}
     </div>
   )
-}
-
-function debounce(func: Function, wait: number) {
-  let timeout: NodeJS.Timeout;
-  return function (this: any, ...args: any[]) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), wait);
-  };
 }
 
 export default App
