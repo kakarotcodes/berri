@@ -312,7 +312,7 @@ function trackMousePosition(window: BrowserWindow) {
         }
         
         const targetBounds = {
-          x: displayX + displayWidth - ANIMATION.HOVER.WIDTH,
+          x: displayX + displayWidth - ANIMATION.HOVER.WIDTH - 15, // 15px margin from right edge
           y: targetY,
           width: ANIMATION.HOVER.WIDTH,
           height: ANIMATION.HOVER.HEIGHT
