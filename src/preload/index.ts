@@ -1,22 +1,22 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { ViewName } from '../main'
 
 // Custom APIs for renderer
 const api = {
-  resizeToPill: () => ipcRenderer.invoke('resize-to-pill'),
-  expandPill: () => ipcRenderer.invoke('expand-pill'),
-  collapsePill: () => ipcRenderer.invoke('collapse-pill'),
-  movePill: (y: number) => ipcRenderer.invoke('move-pill', y),
-  restoreWindow: () => ipcRenderer.invoke('restore-window'),
-  onWindowStateChange: (callback: (state: 'pill' | 'normal') => void) => {
-    ipcRenderer.on('window-state-changed', (_, state) => callback(state))
+  // View management
+  switchView: (viewName: ViewName) => ipcRenderer.invoke('switch-view', viewName),
+  getCurrentView: () => ipcRenderer.invoke('get-current-view'),
+  onViewChanged: (callback: (viewName: ViewName) => void) => {
+    ipcRenderer.on('view-changed', (_, viewName) => callback(viewName))
+    return () => {
+      ipcRenderer.removeAllListeners('view-changed')
+    }
   },
-  onHoverStateChange: (callback: (hovered: boolean) => void) => {
-    ipcRenderer.on('hover-state-changed', (_, hovered) => callback(hovered))
-  },
-  send: (channel: string, ...args: any[]) => {
-    ipcRenderer.send(channel, ...args)
-  }
+  
+  // Drag monitoring
+  notifyDragStart: () => ipcRenderer.invoke('notifyDragStart'),
+  notifyDragEnd: () => ipcRenderer.invoke('notifyDragEnd')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
